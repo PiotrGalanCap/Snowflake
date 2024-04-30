@@ -7,6 +7,7 @@ terraform {
   }
 }
 
+#import accounts
 provider "snowflake" {
   account  = var.acount_name
   user     = var.acount_user
@@ -39,6 +40,7 @@ provider "snowflake" {
   password = var.acount_password
 }
 
+#create warehouse
 resource "snowflake_warehouse" "warehouse" {
   provider = snowflake.sys_admin
   name           = "POC_1_WH"
@@ -49,11 +51,13 @@ resource "snowflake_warehouse" "warehouse" {
   initially_suspended = true
 }
 
+#create database
 resource "snowflake_database" "db_poc1" {
   provider = snowflake.sys_admin
   name     = "POC_1_DATABASE"
 }
 
+#create schema
 resource "snowflake_schema" "schema_poc1" {
   provider   = snowflake.sys_admin
   database   = snowflake_database.db_poc1.name
@@ -61,6 +65,7 @@ resource "snowflake_schema" "schema_poc1" {
   is_managed = true
 }
 
+#create all needed roles
 resource "snowflake_role" "s_read_role" {
   provider = snowflake.acc_admin
   name     = "S_READ"
@@ -91,6 +96,7 @@ resource "snowflake_role" "local_admin_role" {
   name     = "LOCAL_ADMIN_ROLE"
 }
 
+#grant privileges to roles
 resource "snowflake_grant_privileges_to_role" "s_read_grant" {
   provider = snowflake.security_admin
   privileges = ["USAGE"]
@@ -234,7 +240,7 @@ resource "snowflake_account_grant" "grant_create_user" {
   with_grant_option = false
 }
 
-
+#grant ownership and create hierarchy
 resource "snowflake_grant_ownership" "s_read_ownership" {
   provider = snowflake.security_admin
   account_role_name   = snowflake_role.s_full_role.name
@@ -286,6 +292,7 @@ resource "snowflake_grant_ownership" "d_full_ownership" {
 }
 
 
+#grant roles to other roles
 resource "snowflake_role_grants" "grant_s_read" {
   provider = snowflake.security_admin
   role_name = snowflake_role.s_read_role.name
@@ -316,12 +323,14 @@ resource "snowflake_role_grants" "grant_d_full" {
   roles     = [snowflake_role.local_admin_role.name]
 }
 
+#grant local_admin role to sysadmin
 resource "snowflake_role_grants" "grant_local_admin" {
   provider = snowflake.security_admin
   role_name = snowflake_role.local_admin_role.name
   roles     = ["SYSADMIN"]
 }
 
+#create admin_user
 resource "snowflake_user" "ADMIN_USER" {
   provider = snowflake.user_admin
   name         = var.local_admin_name
@@ -332,6 +341,7 @@ resource "snowflake_user" "ADMIN_USER" {
   default_role            = snowflake_role.local_admin_role.name
 }
 
+#grant role to local_admin user
 resource "snowflake_role_grants" "grant_admin_role_to_user" {
   provider = snowflake.security_admin
   role_name = snowflake_role.local_admin_role.name
